@@ -1,10 +1,22 @@
 /* =========================================================
    VITALIS — script.js
-   Toda la data de aquí (servicios, horarios ocupados, etc.)
-   es de EJEMPLO. Al migrar a PHP, los bloques marcados con
-   "// PHP:" son los puntos donde reemplazas datos estáticos
-   por fetch() a tus endpoints (ej. api/horarios.php,
-   api/citas.php, api/login.php).
+   Calendario con FullCalendar. Los bloques marcados con
+   "// PHP:" son los puntos exactos donde reemplazas datos
+   de ejemplo por llamadas fetch() a tus endpoints reales
+   (ej. api/eventos.php, api/holds.php, api/citas.php).
+
+   IMPORTANTE sobre el conteo de 5 minutos:
+   El temporizador de este archivo es SOLO visual, para que
+   el usuario sepa cuánto tiempo le queda. La prevención real
+   de citas duplicadas debe vivir en el backend: al seleccionar
+   un horario, PHP debe insertar un registro en una tabla
+   `reservas_temporales` con una columna `expira_en`
+   (NOW() + INTERVAL 5 MINUTE), y esa fila debe bloquear el
+   horario para cualquier otra persona (por ejemplo con un
+   índice único sobre servicio+fecha+hora, o una transacción
+   con bloqueo de fila). Un proceso programado (cron) o una
+   verificación en cada consulta debe borrar las reservas
+   vencidas para liberar el horario automáticamente.
    ========================================================= */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -17,114 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
     navToggle.setAttribute('aria-expanded', isOpen);
   });
 
-  /* =========================================================
-     DATOS DE EJEMPLO
-     PHP: esto vendría de una consulta a la tabla `horarios_ocupados`
-     filtrada por servicio y fecha.
-     ========================================================= */
-  const DIAS = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
-  const HORAS = ['09:00','10:00','11:00','12:00','13:00','16:00','17:00','18:00'];
-
-  // Horas ya ocupadas por día (índice 0-5 = próximos 6 días) y servicio.
-  const OCUPADAS = {
-    fisioterapia:     { 0:['10:00','16:00'], 1:['09:00'], 2:[], 3:['11:00','17:00'], 4:[], 5:['12:00'] },
-    masoterapia:      { 0:['09:00'], 1:[], 2:['13:00'], 3:[], 4:['16:00'], 5:[] },
-    'rehab-deportiva':{ 0:[], 1:['10:00','11:00'], 2:[], 3:[], 4:['09:00'], 5:['18:00'] },
-    nutricion:        { 0:['17:00'], 1:[], 2:['10:00'], 3:[], 4:[], 5:[] }
-  };
-
-  function proximosDias(n){
-    const out = [];
-    const hoy = new Date();
-    for(let i=0;i<n;i++){
-      const d = new Date(hoy);
-      d.setDate(hoy.getDate()+i);
-      out.push(d);
-    }
-    return out;
-  }
-
-  /* =========================================================
-     WIDGET MINI (hero)
-     ========================================================= */
-  const miniDaysEl = document.getElementById('miniDays');
-  const miniServiceEl = document.getElementById('miniService');
-  const miniSlotsEl = document.getElementById('miniSlots');
-  const miniConfirmBtn = document.getElementById('miniConfirm');
-  const miniConfirmedNote = document.getElementById('miniConfirmedNote');
-
-  const dias5 = proximosDias(5);
-  let miniSelectedDay = 0;
-  let miniSelectedSlot = null;
-
-  function renderMiniDays(){
-    miniDaysEl.innerHTML = '';
-    dias5.forEach((d, idx) => {
-      const btn = document.createElement('button');
-      btn.className = 'day-chip' + (idx === miniSelectedDay ? ' is-selected' : '');
-      btn.type = 'button';
-      btn.innerHTML = `<span class="dow">${DIAS[d.getDay()]}</span><span class="num">${d.getDate()}</span>`;
-      btn.addEventListener('click', () => {
-        miniSelectedDay = idx;
-        miniSelectedSlot = null;
-        renderMiniDays();
-        renderMiniSlots();
-        updateMiniButton();
-      });
-      miniDaysEl.appendChild(btn);
-    });
-  }
-
-  function renderMiniSlots(){
-    const servicio = miniServiceEl.value;
-    const ocupadas = (OCUPADAS[servicio] && OCUPADAS[servicio][miniSelectedDay]) || [];
-    miniSlotsEl.innerHTML = '';
-    HORAS.slice(0,6).forEach(hora => {
-      const busy = ocupadas.includes(hora);
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'slot-btn' + (miniSelectedSlot === hora ? ' is-selected' : '');
-      btn.textContent = hora;
-      btn.disabled = busy;
-      btn.addEventListener('click', () => {
-        miniSelectedSlot = hora;
-        renderMiniSlots();
-        updateMiniButton();
-      });
-      miniSlotsEl.appendChild(btn);
-    });
-  }
-
-  function updateMiniButton(){
-    if(miniSelectedSlot){
-      miniConfirmBtn.disabled = false;
-      miniConfirmBtn.textContent = `Confirmar ${miniSelectedSlot}`;
-    } else {
-      miniConfirmBtn.disabled = true;
-      miniConfirmBtn.textContent = 'Selecciona un horario';
-      miniConfirmedNote.hidden = true;
-    }
-  }
-
-  miniServiceEl.addEventListener('change', () => {
-    miniSelectedSlot = null;
-    renderMiniSlots();
-    updateMiniButton();
-  });
-
-  miniConfirmBtn.addEventListener('click', () => {
-    /* PHP: aquí iría un fetch POST a api/citas.php con
-       { servicio, fecha, hora } y la sesión del usuario. */
-    miniConfirmedNote.hidden = false;
-    document.getElementById('agenda').scrollIntoView({ behavior:'smooth' });
-  });
-
-  renderMiniDays();
-  renderMiniSlots();
-
-  /* =========================================================
-     SERVICIOS — expandir detalles
-     ========================================================= */
+  /* ---------- Servicios — expandir detalles ---------- */
   document.querySelectorAll('.service-toggle').forEach(btn => {
     const details = btn.parentElement.querySelector('.service-details');
     btn.addEventListener('click', () => {
@@ -136,94 +41,277 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   /* =========================================================
-     AGENDA COMPLETA (sección #agenda)
+     CONFIGURACIÓN DE SERVICIOS
      ========================================================= */
+  const SERVICE_DURATIONS = {
+    'fisioterapia': 50,
+    'masoterapia': 40,
+    'rehab-deportiva': 60,
+    'nutricion': 45
+  };
+  const SERVICE_LABELS = {
+    'fisioterapia': 'Fisioterapia',
+    'masoterapia': 'Masoterapia',
+    'rehab-deportiva': 'Rehabilitación deportiva',
+    'nutricion': 'Consulta nutricional'
+  };
+
   const bookingServiceEl = document.getElementById('bookingService');
-  const bookingWeekEl = document.getElementById('bookingWeek');
-  const bookingSlotsEl = document.getElementById('bookingSlots');
-  const bookingForm = document.getElementById('bookingForm');
-  const bookingSuccess = document.getElementById('bookingSuccess');
-  const bookingSummary = document.getElementById('bookingSummary');
-  const bookingReset = document.getElementById('bookingReset');
 
-  const dias6 = proximosDias(6);
-  let bkSelectedDay = 0;
-  let bkSelectedSlot = null;
+  /* =========================================================
+     EVENTOS DE EJEMPLO (simulan lo que hoy vendría de tu BD)
+     PHP: reemplaza generarEventosSimulados() por un fetch a
+     api/eventos.php?servicio=X&start=Y&end=Z que devuelva JSON
+     con las citas ya confirmadas de ese servicio.
+     ========================================================= */
+  function generarEventosSimulados(servicio, rangeStart, rangeEnd){
+    const eventos = [];
+    const dur = SERVICE_DURATIONS[servicio] || 50;
+    const horasBase = [9, 10, 11, 13, 16, 17];
+    // Semilla simple para que cada servicio tenga horarios "ocupados" distintos y estables
+    let seed = servicio.split('').reduce((a,c) => a + c.charCodeAt(0), 0);
 
-  function renderBookingWeek(){
-    bookingWeekEl.innerHTML = '';
-    dias6.forEach((d, idx) => {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'day-chip' + (idx === bkSelectedDay ? ' is-selected' : '');
-      btn.innerHTML = `<span class="dow">${DIAS[d.getDay()]}</span><span class="num">${d.getDate()}</span>`;
-      btn.addEventListener('click', () => {
-        bkSelectedDay = idx;
-        bkSelectedSlot = null;
-        renderBookingWeek();
-        renderBookingSlots();
-        toggleBookingForm(false);
-      });
-      bookingWeekEl.appendChild(btn);
-    });
+    const cursor = new Date(rangeStart);
+    let dia = 0;
+    while (cursor < rangeEnd) {
+      const dow = cursor.getDay();
+      if (dow !== 0) { // sin citas los domingos
+        const nOcupados = (seed + dia) % 3; // 0,1 o 2 ocupados por día
+        for (let i = 0; i < nOcupados; i++) {
+          const hora = horasBase[(seed + dia + i * 3) % horasBase.length];
+          const start = new Date(cursor);
+          start.setHours(hora, 0, 0, 0);
+          const end = new Date(start.getTime() + dur * 60000);
+          eventos.push({
+            id: `busy-${servicio}-${start.toISOString()}`,
+            title: 'Ocupado',
+            start: start.toISOString(),
+            end: end.toISOString(),
+            classNames: ['evt-ocupado'],
+            editable: false,
+            extendedProps: { tipo: 'ocupado', servicio }
+          });
+        }
+      }
+      cursor.setDate(cursor.getDate() + 1);
+      dia++;
+    }
+    return eventos;
   }
 
-  function renderBookingSlots(){
-    const servicio = bookingServiceEl.value;
-    const ocupadas = (OCUPADAS[servicio] && OCUPADAS[servicio][bkSelectedDay]) || [];
-    bookingSlotsEl.innerHTML = '';
-    HORAS.forEach(hora => {
-      const busy = ocupadas.includes(hora);
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'slot-btn' + (bkSelectedSlot === hora ? ' is-selected' : '');
-      btn.textContent = hora;
-      btn.disabled = busy;
-      btn.addEventListener('click', () => {
-        bkSelectedSlot = hora;
-        renderBookingSlots();
-        toggleBookingForm(true);
-      });
-      bookingSlotsEl.appendChild(btn);
-    });
-  }
+  /* =========================================================
+     CALENDARIO
+     ========================================================= */
+  const calendarEl = document.getElementById('calendar');
+  let holdEvent = null; // referencia al evento de reserva temporal activo
 
-  function toggleBookingForm(show){
-    bookingForm.hidden = !show;
-    bookingSuccess.hidden = true;
-  }
+  const calendar = new FullCalendar.Calendar(calendarEl, {
+    locale: 'es',
+    height: '100%',
+    initialView: 'timeGridWeek',
+    headerToolbar: {
+      left: 'prev,next today',
+      center: 'title',
+      right: 'dayGridMonth,timeGridWeek,timeGridDay'
+    },
+    buttonText: { today: 'Hoy', month: 'Mes', week: 'Semana', day: 'Día' },
+    firstDay: 1,
+    slotMinTime: '09:00:00',
+    slotMaxTime: '19:00:00',
+    allDaySlot: false,
+    nowIndicator: true,
+    selectable: true,
+    selectMirror: true,
+    selectOverlap: false,
+    businessHours: [
+      { daysOfWeek: [1,2,3,4,5], startTime: '09:00', endTime: '19:00' },
+      { daysOfWeek: [6], startTime: '09:00', endTime: '14:00' }
+    ],
+    selectConstraint: 'businessHours',
+
+    /* PHP: fuente de eventos — reemplazar por fetch real */
+    events: function (fetchInfo, successCallback, failureCallback) {
+      const servicio = bookingServiceEl.value;
+
+      // PHP: const url = `api/eventos.php?servicio=${servicio}&start=${fetchInfo.startStr}&end=${fetchInfo.endStr}`;
+      //      fetch(url).then(r => r.json()).then(successCallback).catch(failureCallback);
+
+      try {
+        const eventos = generarEventosSimulados(servicio, fetchInfo.start, fetchInfo.end);
+        successCallback(eventos);
+      } catch (err) {
+        failureCallback(err);
+      }
+    },
+
+    select: function (info) {
+      const servicio = bookingServiceEl.value;
+      const dur = SERVICE_DURATIONS[servicio] || 50;
+      const start = info.start;
+      const end = new Date(start.getTime() + dur * 60000);
+
+      calendar.unselect();
+
+      if (info.view.type === 'dayGridMonth') {
+        // En vista mensual solo se elige el día; se cambia a vista de día para escoger hora.
+        calendar.changeView('timeGridDay', start);
+        return;
+      }
+
+      iniciarReservaTemporal(servicio, start, end);
+    },
+
+    eventClick: function (info) {
+      if (info.event.extendedProps.tipo === 'hold') {
+        // Click sobre tu propia reserva temporal: reabre el panel
+        abrirPanelHold();
+      }
+    }
+  });
+
+  calendar.render();
 
   bookingServiceEl.addEventListener('change', () => {
-    bkSelectedSlot = null;
-    renderBookingSlots();
-    toggleBookingForm(false);
+    cancelarReservaTemporal({ silencioso: true });
+    calendar.refetchEvents();
   });
 
-  bookingForm.addEventListener('submit', (e) => {
+  /* =========================================================
+     RESERVA TEMPORAL DE 5 MINUTOS
+     ========================================================= */
+  const HOLD_SECONDS = 5 * 60;
+  const RING_CIRCUMFERENCE = 100.5;
+
+  const holdPanel = document.getElementById('holdPanel');
+  const holdSummary = document.getElementById('holdSummary');
+  const holdForm = document.getElementById('holdForm');
+  const holdTimeLabel = document.getElementById('holdTimeLabel');
+  const holdRingFg = document.getElementById('holdRingFg');
+  const holdCancelBtn = document.getElementById('holdCancel');
+  const holdCloseBtn = document.getElementById('holdClose');
+
+  let holdTimer = null;
+  let holdSecondsLeft = HOLD_SECONDS;
+  let holdData = null; // { servicio, start, end }
+
+  function iniciarReservaTemporal(servicio, start, end){
+    // Si ya había una reserva activa, se libera primero.
+    cancelarReservaTemporal({ silencioso: true });
+
+    /* PHP: aquí se debe POSTear a api/holds.php ANTES de mostrar
+       el panel, para que el backend registre el bloqueo real:
+       fetch('api/holds.php', { method:'POST', body: JSON.stringify({
+         servicio, inicio: start.toISOString(), fin: end.toISOString()
+       })})
+       .then(r => r.json())
+       .then(resp => { if (!resp.ok) { alert('Ese horario ya no está disponible'); calendar.refetchEvents(); return; }
+                        holdData = { servicio, start, end, holdId: resp.holdId };
+                        mostrarPanelHold(); })
+       Por ahora, como no hay backend conectado, se simula localmente: */
+
+    holdData = { servicio, start, end };
+
+    holdEvent = calendar.addEvent({
+      id: 'hold-actual',
+      title: 'Reservado (temporal)',
+      start,
+      end,
+      classNames: ['evt-hold'],
+      editable: false,
+      extendedProps: { tipo: 'hold' }
+    });
+
+    mostrarPanelHold();
+  }
+
+  function mostrarPanelHold(){
+    const { servicio, start, end } = holdData;
+    const fechaTexto = start.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
+    const horaInicio = start.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+    const horaFin = end.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+
+    holdSummary.textContent = `${SERVICE_LABELS[servicio]} · ${fechaTexto}, ${horaInicio} – ${horaFin}`;
+
+    holdSecondsLeft = HOLD_SECONDS;
+    actualizarRelojHold();
+    holdPanel.hidden = false;
+    holdPanel.classList.remove('is-expiring');
+
+    clearInterval(holdTimer);
+    holdTimer = setInterval(() => {
+      holdSecondsLeft--;
+      actualizarRelojHold();
+      if (holdSecondsLeft <= 60) holdPanel.classList.add('is-expiring');
+      if (holdSecondsLeft <= 0) {
+        cancelarReservaTemporal({ expirado: true });
+      }
+    }, 1000);
+  }
+
+  function abrirPanelHold(){
+    if (holdData) holdPanel.hidden = false;
+  }
+
+  function actualizarRelojHold(){
+    const m = Math.floor(holdSecondsLeft / 60);
+    const s = holdSecondsLeft % 60;
+    holdTimeLabel.textContent = `${m}:${String(s).padStart(2, '0')}`;
+    const progreso = holdSecondsLeft / HOLD_SECONDS;
+    holdRingFg.style.strokeDashoffset = String(RING_CIRCUMFERENCE * (1 - progreso));
+  }
+
+  function cancelarReservaTemporal({ expirado = false, silencioso = false } = {}){
+    clearInterval(holdTimer);
+    holdTimer = null;
+
+    if (holdEvent) {
+      /* PHP: si había un hold activo, avisar al backend para borrarlo:
+         fetch('api/holds.php?id=' + holdData.holdId, { method:'DELETE' }); */
+      holdEvent.remove();
+      holdEvent = null;
+    }
+
+    holdPanel.hidden = true;
+    holdPanel.classList.remove('is-expiring');
+    holdForm.reset();
+    holdData = null;
+
+    if (expirado && !silencioso) {
+      alert('El tiempo de reserva expiró. El horario quedó disponible de nuevo, puedes elegir otro.');
+    }
+  }
+
+  holdCancelBtn.addEventListener('click', () => cancelarReservaTemporal());
+  holdCloseBtn.addEventListener('click', () => cancelarReservaTemporal());
+
+  holdForm.addEventListener('submit', (e) => {
     e.preventDefault();
-    /* PHP: aquí se envía el formulario completo a api/citas.php
-       (POST) con servicio, fecha, hora y datos del cliente,
-       para insertarse en la tabla `citas` y `clientes`. */
+    if (!holdData) return;
+
+    /* PHP: aquí se envía el formulario completo a api/citas.php (POST)
+       con servicio, inicio, fin, datos del cliente y el holdId, para:
+       1) insertar la cita definitiva en la tabla `citas`
+       2) insertar o actualizar el cliente en la tabla `clientes`
+       3) borrar la fila correspondiente en `reservas_temporales`
+       El backend responde { ok: true } o un error si alguien más
+       confirmó ese mismo horario primero. */
+
     const nombre = document.getElementById('bkName').value;
-    const fecha = dias6[bkSelectedDay];
-    const fechaTexto = fecha.toLocaleDateString('es-MX', { weekday:'long', day:'numeric', month:'long' });
-    const servicioTexto = bookingServiceEl.options[bookingServiceEl.selectedIndex].text;
+    const { servicio, start } = holdData;
+    const fechaTexto = start.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
+    const horaTexto = start.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
 
-    bookingSummary.textContent = `${nombre}, tu cita de ${servicioTexto} quedó para el ${fechaTexto} a las ${bkSelectedSlot}.`;
-    bookingForm.hidden = true;
-    bookingSuccess.hidden = false;
+    clearInterval(holdTimer);
+    holdTimer = null;
+    holdPanel.hidden = true;
+    holdForm.reset();
+    holdEvent = null; // se reemplaza por el evento confirmado al refrescar
+    holdData = null;
+
+    calendar.refetchEvents();
+
+    alert(`Cita confirmada para ${nombre}: ${SERVICE_LABELS[servicio]} el ${fechaTexto} a las ${horaTexto}.`);
   });
-
-  bookingReset.addEventListener('click', () => {
-    bookingForm.reset();
-    bkSelectedSlot = null;
-    renderBookingSlots();
-    bookingSuccess.hidden = true;
-    bookingForm.hidden = true;
-  });
-
-  renderBookingWeek();
-  renderBookingSlots();
 
   /* =========================================================
      ACCESO — tabs cliente / admin
@@ -234,9 +322,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   accessTabs.forEach(tab => {
     tab.addEventListener('click', () => {
-      accessTabs.forEach(t => { t.classList.remove('is-active'); t.setAttribute('aria-selected','false'); });
+      accessTabs.forEach(t => { t.classList.remove('is-active'); t.setAttribute('aria-selected', 'false'); });
       tab.classList.add('is-active');
-      tab.setAttribute('aria-selected','true');
+      tab.setAttribute('aria-selected', 'true');
       const role = tab.dataset.role;
       accessSubmit.textContent = role === 'admin' ? 'Entrar como administrador' : 'Entrar como cliente';
       accessForm.dataset.role = role;
@@ -245,10 +333,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   accessForm.addEventListener('submit', (e) => {
     e.preventDefault();
-    /* PHP: aquí se envía { email, password, role } a api/login.php
-       vía POST. El backend valida contra la tabla `usuarios`
-       (con contraseñas hasheadas) y responde con sesión/token.
-       Según el rol, se redirige a panel-cliente.php o panel-admin.php. */
+    /* PHP: enviar { email, password, role } a api/login.php vía POST.
+       El backend valida contra la tabla `usuarios` (contraseñas
+       hasheadas) y responde con sesión/token. Según el rol, se
+       redirige a panel-cliente.php o panel-admin.php. */
     const role = accessForm.dataset.role || 'cliente';
     alert(
       role === 'admin'

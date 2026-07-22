@@ -7,6 +7,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
+
+<!-- FullCalendar (bundle global: incluye dayGrid, timeGrid, list e interacción) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/6.1.11/index.global.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/6.1.11/locales-all.global.min.js"></script>
 </head>
 <body>
 
@@ -45,54 +49,22 @@
 
   <!-- ============ HERO ============ -->
   <section class="hero">
-    <div class="wrap hero-grid">
-      <div class="hero-copy">
-        <p class="eyebrow">Consultorio de terapias &amp; bienestar</p>
-        <h1>Tu recuperación, con una cita en el momento justo.</h1>
-        <p class="hero-lead">
-          Fisioterapia, rehabilitación deportiva y terapias de bienestar en un solo lugar.
-          Elige tu servicio, revisa horarios disponibles en tiempo real y confirma tu cita
-          en menos de un minuto.
-        </p>
-        <div class="hero-ctas">
-          <a href="#agenda" class="btn btn-primary">Ver horarios disponibles</a>
-          <a href="#servicios" class="btn btn-ghost">Conocer servicios</a>
-        </div>
-        <ul class="hero-trust">
-          <li><strong>+12</strong> años de experiencia</li>
-          <li><strong>4</strong> especialidades</li>
-          <li><strong>Confirmación</strong> inmediata</li>
-        </ul>
+    <div class="wrap hero-single">
+      <p class="eyebrow center">Consultorio de terapias &amp; bienestar</p>
+      <h1 class="center">Tu recuperación, con una cita en el momento justo.</h1>
+      <p class="hero-lead center">
+        Fisioterapia, rehabilitación deportiva y terapias de bienestar en un solo lugar.
+        Consulta el calendario completo, elige tu horario y confírmalo antes de que se libere.
+      </p>
+      <div class="hero-ctas center">
+        <a href="#agenda" class="btn btn-primary">Ver calendario completo</a>
+        <a href="#servicios" class="btn btn-ghost">Conocer servicios</a>
       </div>
-
-      <!-- Widget de agenda: elemento distintivo, funcional desde ya -->
-      <div class="hero-widget" aria-label="Vista previa de agenda">
-        <div class="agenda-card">
-          <div class="agenda-card-head">
-            <span class="agenda-card-title">Agenda rápida</span>
-            <span class="agenda-card-sub" id="miniMonthLabel">Julio 2026</span>
-          </div>
-
-          <div class="agenda-days" id="miniDays" role="tablist" aria-label="Selecciona un día"></div>
-
-          <div class="agenda-service-select">
-            <label for="miniService">Servicio</label>
-            <select id="miniService">
-              <option value="fisioterapia">Fisioterapia</option>
-              <option value="masoterapia">Masoterapia</option>
-              <option value="rehab-deportiva">Rehabilitación deportiva</option>
-              <option value="nutricion">Consulta nutricional</option>
-            </select>
-          </div>
-
-          <div class="agenda-slots" id="miniSlots" aria-label="Horarios disponibles"></div>
-
-          <button class="btn btn-primary btn-block" id="miniConfirm" disabled>Selecciona un horario</button>
-          <p class="agenda-note" id="miniConfirmedNote" hidden>
-            Cita marcada localmente. En la versión con base de datos, esto se guardará en tu expediente.
-          </p>
-        </div>
-      </div>
+      <ul class="hero-trust center">
+        <li><strong>+12</strong> años de experiencia</li>
+        <li><strong>4</strong> especialidades</li>
+        <li><strong>Calendario</strong> en tiempo real</li>
+      </ul>
     </div>
   </section>
 
@@ -107,7 +79,6 @@
       </p>
 
       <div class="service-grid" id="serviceGrid">
-        <!-- Servicio destacado: Fisioterapia -->
         <article class="service-card is-featured" data-service="fisioterapia">
           <div class="service-icon" aria-hidden="true">
             <svg viewBox="0 0 48 48" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.6">
@@ -135,7 +106,6 @@
           </div>
         </article>
 
-        <!-- Masoterapia -->
         <article class="service-card" data-service="masoterapia">
           <div class="service-icon" aria-hidden="true">
             <svg viewBox="0 0 48 48" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.6">
@@ -159,7 +129,6 @@
           </div>
         </article>
 
-        <!-- Rehabilitación deportiva -->
         <article class="service-card" data-service="rehab-deportiva">
           <div class="service-icon" aria-hidden="true">
             <svg viewBox="0 0 48 48" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.6">
@@ -183,7 +152,6 @@
           </div>
         </article>
 
-        <!-- Consulta nutricional -->
         <article class="service-card" data-service="nutricion">
           <div class="service-icon" aria-hidden="true">
             <svg viewBox="0 0 48 48" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.6">
@@ -224,8 +192,8 @@
         </li>
         <li>
           <span class="how-num">02</span>
-          <h3>Selecciona fecha y hora</h3>
-          <p>Consulta la disponibilidad real del consultorio y elige el horario que prefieras.</p>
+          <h3>Elige un horario en el calendario</h3>
+          <p>Se reserva por 5 minutos mientras completas tus datos, para que nadie más lo tome.</p>
         </li>
         <li>
           <span class="how-num">03</span>
@@ -236,25 +204,18 @@
     </div>
   </section>
 
-  <!-- ============ AGENDA COMPLETA ============ -->
+  <!-- ============ CALENDARIO (FullCalendar) ============ -->
   <section class="booking" id="agenda">
-    <div class="wrap booking-grid">
-      <div class="booking-copy">
-        <p class="eyebrow">Agenda tu cita</p>
-        <h2>Disponibilidad de esta semana</h2>
-        <p class="section-lead">
-          Elige el servicio, después el día y el horario. Los espacios ocupados
-          se muestran deshabilitados.
-        </p>
-        <div class="booking-legend">
-          <span><i class="dot dot-free"></i> Disponible</span>
-          <span><i class="dot dot-busy"></i> Ocupado</span>
-          <span><i class="dot dot-selected"></i> Seleccionado</span>
-        </div>
-      </div>
+    <div class="wrap booking-head">
+      <p class="eyebrow">Agenda tu cita</p>
+      <h2>Calendario en tiempo real</h2>
+      <p class="section-lead">
+        Cambia entre vista de día, semana o mes. Los horarios ocupados se muestran bloqueados;
+        al elegir uno disponible, se reserva 5 minutos para ti mientras confirmas.
+      </p>
 
-      <div class="booking-panel">
-        <div class="booking-service-row">
+      <div class="booking-toolbar">
+        <div class="field field-inline">
           <label for="bookingService">Servicio</label>
           <select id="bookingService">
             <option value="fisioterapia">Fisioterapia — 50 min</option>
@@ -263,12 +224,36 @@
             <option value="nutricion">Consulta nutricional — 45 min</option>
           </select>
         </div>
+        <div class="booking-legend">
+          <span><i class="dot dot-free"></i> Disponible</span>
+          <span><i class="dot dot-busy"></i> Ocupado</span>
+          <span><i class="dot dot-hold"></i> Tu reserva temporal</span>
+        </div>
+      </div>
+    </div>
 
-        <div class="booking-week" id="bookingWeek"></div>
-        <div class="booking-slots" id="bookingSlots"></div>
+    <!-- Contenedor a ancho completo de pantalla -->
+    <div class="calendar-shell">
+      <div id="calendar"></div>
+    </div>
+  </section>
 
-        <form class="booking-form" id="bookingForm" hidden>
-          <h4>Tus datos</h4>
+  <!-- ============ PANEL DE RESERVA TEMPORAL (flotante) ============ -->
+  <div class="hold-panel" id="holdPanel" hidden>
+    <div class="hold-panel-inner">
+      <div class="hold-timer">
+        <svg viewBox="0 0 36 36" class="hold-ring" aria-hidden="true">
+          <circle cx="18" cy="18" r="16" class="hold-ring-bg"/>
+          <circle cx="18" cy="18" r="16" class="hold-ring-fg" id="holdRingFg"/>
+        </svg>
+        <span id="holdTimeLabel">5:00</span>
+      </div>
+
+      <div class="hold-body">
+        <h4>Horario reservado temporalmente</h4>
+        <p id="holdSummary" class="hold-summary"></p>
+
+        <form id="holdForm" class="hold-form">
           <div class="field-row">
             <div class="field">
               <label for="bkName">Nombre completo</label>
@@ -283,17 +268,16 @@
             <label for="bkEmail">Correo</label>
             <input type="email" id="bkEmail" required placeholder="tucorreo@ejemplo.com">
           </div>
-          <button type="submit" class="btn btn-primary btn-block">Confirmar cita</button>
+          <div class="hold-actions">
+            <button type="button" class="btn btn-ghost btn-sm" id="holdCancel">Liberar horario</button>
+            <button type="submit" class="btn btn-primary btn-sm">Confirmar cita</button>
+          </div>
         </form>
-
-        <div class="booking-success" id="bookingSuccess" hidden>
-          <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M8 12l3 3 5-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          <p><strong>Cita registrada.</strong> <span id="bookingSummary"></span></p>
-          <button class="btn btn-ghost btn-sm" id="bookingReset">Agendar otra cita</button>
-        </div>
       </div>
+
+      <button class="hold-close" id="holdClose" aria-label="Cerrar">&times;</button>
     </div>
-  </section>
+  </div>
 
   <!-- ============ ACCESO (CLIENTE / ADMIN) ============ -->
   <section class="access" id="acceso">
