@@ -127,7 +127,14 @@ img{ max-width:100%; display:block; }
 
 .header-actions{ display:flex; align-items:center; gap:1em; }
 .nav-toggle{ display:none; flex-direction:column; gap:5px; background:none; border:none; padding:6px; }
-.nav-toggle span{ width:22px; height:2px; background:var(--color-primary-dark); display:block; }
+.nav-toggle span{ width:22px; height:2px; background:var(--color-primary-dark); display:block; transition:transform .2s ease, opacity .2s ease; }
+.nav-toggle[aria-expanded="true"] span:nth-child(1){ transform:translateY(7px) rotate(45deg); }
+.nav-toggle[aria-expanded="true"] span:nth-child(2){ opacity:0; }
+.nav-toggle[aria-expanded="true"] span:nth-child(3){ transform:translateY(-7px) rotate(-45deg); }
+
+/* Menú móvil desplegable: en escritorio .main-nav ya es visible (flex);
+   estas reglas solo importan dentro del media query de 900px de abajo,
+   donde .main-nav pasa a display:none salvo que tenga .is-open */
 
 /* =========================================================
    HERO (simplificado, sin widget)
@@ -415,18 +422,51 @@ img{ max-width:100%; display:block; }
    RESPONSIVE
    ========================================================= */
 @media (max-width: 900px){
-  .main-nav{ display:none; }
   .nav-toggle{ display:flex; }
+
+  /* Menú móvil: se despliega debajo del header al tocar el botón */
+  .main-nav{
+    display:flex;
+    flex-direction:column;
+    gap:0;
+    position:absolute;
+    top:72px; left:0; right:0;
+    background:var(--color-surface);
+    border-bottom:1px solid var(--color-border);
+    box-shadow:var(--shadow-card);
+    max-height:0;
+    overflow:hidden;
+    transition:max-height .25s ease;
+  }
+  .main-nav.is-open{ max-height:320px; }
+  .main-nav a{ padding:14px 24px; border-top:1px solid var(--color-border); }
+  .main-nav a:first-child{ border-top:none; }
+
   .access-grid{ grid-template-columns:1fr; }
   .service-grid{ grid-template-columns:repeat(2,1fr); }
   .how-steps{ grid-template-columns:1fr; gap:28px; }
   .info-grid{ grid-template-columns:1fr; }
   #calendar{ height:80vh; }
 }
+@media (max-width: 640px){
+  /* El botón "Agendar cita" del header estorba junto al menú hamburguesa */
+  .header-actions .btn-primary.btn-sm{ display:none; }
+
+  /* Toolbar de FullCalendar: apilar en vez de una sola fila apretada */
+  #calendar .fc-header-toolbar{
+    flex-direction:column;
+    align-items:stretch;
+    gap:10px;
+  }
+  #calendar .fc-toolbar-chunk{ display:flex; justify-content:center; }
+  #calendar .fc-toolbar-title{ font-size:1.1rem; text-align:center; }
+  #calendar .fc-button{ padding:.45em .7em; font-size:.85rem; }
+}
 @media (max-width: 560px){
   .service-grid{ grid-template-columns:1fr; }
   .hold-form .field-row{ grid-template-columns:1fr; }
   .hold-panel{ right:12px; bottom:12px; left:12px; max-width:none; width:auto; }
+  #calendar{ height:74vh; min-height:520px; }
 }
 
 @media (prefers-reduced-motion: reduce){
