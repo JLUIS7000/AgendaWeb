@@ -3,21 +3,24 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Vitalis · Sistema de Agendas</title>
+<title>Vitalis — Agenda tu terapia</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
 
-<!-- FullCalendar (bundle global: incluye dayGrid, timeGrid, list e interacción) -->
+<!-- FullCalendar (vista previa de disponibilidad) -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/6.1.11/index.global.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/6.1.11/locales-all.global.min.js"></script>
+<!-- Leaflet (mapa de ubicación en tiempo real) -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 <body>
 
 <!-- ============ HEADER ============ -->
 <header class="site-header" id="inicio">
   <div class="wrap header-inner">
-    <a class="brand" href="#inicio">
+    <a class="brand" href="#" data-nav="home">
       <span class="brand-mark" aria-hidden="true">
         <svg viewBox="0 0 40 40" width="34" height="34">
           <circle cx="20" cy="20" r="18" fill="none" stroke="currentColor" stroke-width="1.5"/>
@@ -29,15 +32,16 @@
     </a>
 
     <nav class="main-nav" id="mainNav">
-      <a href="#servicios">Servicios</a>
-      <a href="#como-funciona">Cómo funciona</a>
-      <a href="#agenda">Agendar</a>
-      <a href="#acceso">Acceso</a>
-      <a href="#contacto">Contacto</a>
+      <a href="#servicios" data-nav="home">Inicio</a>
+      <a href="#como-funciona" data-nav="home">Consulta</a>
+      <a href="#agenda" data-nav="home">Agendar</a>
+      <a href="#contacto" data-nav="home">Contacto</a>
     </nav>
 
     <div class="header-actions">
-      <a href="#agenda" class="btn btn-primary btn-sm">Agendar cita</a>
+      <button class="btn btn-ghost btn-sm" id="navAcceder" data-nav="acceso">Acceder</button>
+      <button class="btn btn-ghost btn-sm" id="navVolver" data-nav="home" hidden>← Volver al inicio</button>
+      <a href="#agenda" class="btn btn-primary btn-sm" id="navAgendarCta" data-nav="home">Agendar cita</a>
       <button class="nav-toggle" id="navToggle" aria-label="Abrir menú" aria-expanded="false">
         <span></span><span></span><span></span>
       </button>
@@ -47,24 +51,27 @@
 
 <main>
 
+<!-- ============ VISTA: INICIO ============ -->
+<div class="view" id="view-home" data-view="home">
+
   <!-- ============ HERO ============ -->
   <section class="hero">
     <div class="wrap hero-single">
-      <p class="eyebrow center">Consultorio de terapias &amp; bienestar</p>
+      <p class="eyebrow center">Bienestar en cada terapia</p>
       <h1 class="center">Tu recuperación, con una cita en el momento justo.</h1>
       <p class="hero-lead center">
         Fisioterapia, rehabilitación deportiva y terapias de bienestar en un solo lugar.
         Consulta el calendario completo, elige tu horario y confírmalo antes de que se libere.
       </p>
       <div class="hero-ctas center">
-        <a href="#agenda" class="btn btn-primary">Ver calendario completo</a>
-        <a href="#servicios" class="btn btn-ghost">Conocer servicios</a>
+        <a href="#agenda" class="btn btn-primary">Ver disponibilidad</a>
+        <a href="#servicios" class="btn btn-ghost">Conocer los beneficios</a>
       </div>
-      <ul class="hero-trust center">
-        <li><strong>+12</strong> años de experiencia</li>
-        <li><strong>4</strong> especialidades</li>
-        <li><strong>Calendario</strong> en tiempo real</li>
-      </ul>
+      <svg class="motif-arc" width="120" height="40" viewBox="0 0 120 40" fill="none" aria-hidden="true">
+        <path d="M4 34C24 6 96 6 116 34" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <circle cx="4" cy="34" r="3" fill="currentColor"/>
+        <circle cx="116" cy="34" r="3" fill="currentColor"/>
+      </svg>
     </div>
   </section>
 
@@ -192,8 +199,8 @@
         </li>
         <li>
           <span class="how-num">02</span>
-          <h3>Elige un horario en el calendario</h3>
-          <p>Se reserva por 5 minutos mientras completas tus datos, para que nadie más lo tome.</p>
+          <h3>Inicia sesión y elige un horario</h3>
+          <p>Al ingresar a tu cuenta, el calendario completo se abre en su propia página. Tu horario se reserva 5 minutos mientras confirmas.</p>
         </li>
         <li>
           <span class="how-num">03</span>
@@ -204,14 +211,14 @@
     </div>
   </section>
 
-  <!-- ============ CALENDARIO (FullCalendar) ============ -->
+  <!-- ============ CALENDARIO (vista previa) ============ -->
   <section class="booking" id="agenda">
     <div class="wrap booking-head">
       <p class="eyebrow">Agenda tu cita</p>
       <h2>Calendario en tiempo real</h2>
       <p class="section-lead">
-        Cambia entre vista de día, semana o mes. Los horarios ocupados se muestran bloqueados;
-        al elegir uno disponible, se reserva 5 minutos para ti mientras confirmas.
+        Esta es una vista previa de la disponibilidad. El calendario completo, donde puedes
+        elegir y confirmar tu horario, se abre en una página aparte al iniciar sesión.
       </p>
 
       <div class="booking-toolbar">
@@ -232,81 +239,93 @@
       </div>
     </div>
 
-    <!-- Contenedor a ancho completo de pantalla -->
     <div class="calendar-shell">
       <div id="calendar"></div>
+      <div class="calendar-gate">
+        <div class="calendar-gate-card">
+          <svg class="gate-icon" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+            <rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 018 0v3"/>
+          </svg>
+          <h3>Inicia sesión para agendar</h3>
+          <p>El calendario completo, con selección y confirmación de horario, está disponible dentro de tu cuenta.</p>
+          <button class="btn btn-primary btn-block" data-nav="acceso">Acceder</button>
+        </div>
+      </div>
     </div>
   </section>
 
-  <!-- ============ PANEL DE RESERVA TEMPORAL (flotante) ============ -->
-  <div class="hold-panel" id="holdPanel" hidden>
-    <div class="hold-panel-inner">
-      <div class="hold-timer">
-        <svg viewBox="0 0 36 36" class="hold-ring" aria-hidden="true">
-          <circle cx="18" cy="18" r="16" class="hold-ring-bg"/>
-          <circle cx="18" cy="18" r="16" class="hold-ring-fg" id="holdRingFg"/>
-        </svg>
-        <span id="holdTimeLabel">5:00</span>
+  <!-- ============ ACCESO ============ -->
+  <section class="access-cta">
+    <div class="wrap access-cta-card">
+      <div>
+        <h3>Tu cuenta, tu calendario</h3>
+        <p>Clientes y administradores acceden desde la misma puerta, con vistas distintas dentro del sistema.</p>
       </div>
-
-      <div class="hold-body">
-        <h4>Horario reservado temporalmente</h4>
-        <p id="holdSummary" class="hold-summary"></p>
-
-        <form id="holdForm" class="hold-form">
-          <div class="field-row">
-            <div class="field">
-              <label for="bkName">Nombre completo</label>
-              <input type="text" id="bkName" required placeholder="Nombre y apellido">
-            </div>
-            <div class="field">
-              <label for="bkPhone">Teléfono</label>
-              <input type="tel" id="bkPhone" required placeholder="10 dígitos">
-            </div>
-          </div>
-          <div class="field">
-            <label for="bkEmail">Correo</label>
-            <input type="email" id="bkEmail" required placeholder="tucorreo@ejemplo.com">
-          </div>
-          <div class="hold-actions">
-            <button type="button" class="btn btn-ghost btn-sm" id="holdCancel">Liberar horario</button>
-            <button type="submit" class="btn btn-primary btn-sm">Confirmar cita</button>
-          </div>
-        </form>
-      </div>
-
-      <button class="hold-close" id="holdClose" aria-label="Cerrar">&times;</button>
+      <button class="btn btn-primary" data-nav="acceso">Acceder</button>
     </div>
-  </div>
+  </section>
 
-  <!-- ============ ACCESO (CLIENTE / ADMIN) ============ -->
-  <section class="access" id="acceso">
-    <div class="wrap access-grid">
-      <div class="access-copy">
-        <p class="eyebrow">Acceso al sistema</p>
-        <h2>Entra a tu cuenta</h2>
-        <p class="section-lead">
-          Clientes pueden ver y administrar sus citas. El panel de administración
-          permite gestionar la agenda completa, paquetes y clientes registrados.
-        </p>
-        <ul class="access-points">
-          <li><strong>Clientes:</strong> historial de citas, reprogramación, paquetes contratados.</li>
-          <li><strong>Administración:</strong> agenda general, alta de servicios, gestión de clientes y pagos.</li>
-        </ul>
-      </div>
+  <!-- ============ INFO / CONTACTO / UBICACIÓN ============ -->
+  <section class="location" id="contacto">
+    <div class="wrap">
+      <p class="eyebrow">Ubicación</p>
+      <h2 class="section-title">Encuéntranos en tiempo real</h2>
+      <p class="section-lead">El mapa muestra el consultorio y, si compartes tu ubicación, tu posición actual para calcular la distancia.</p>
 
-      <div class="access-panel">
-        <div class="access-tabs" role="tablist">
-          <button class="access-tab is-active" data-role="cliente" role="tab" aria-selected="true">Cliente</button>
-          <button class="access-tab" data-role="admin" role="tab" aria-selected="false">Administrador</button>
+      <div class="location-grid">
+        <div class="map-card">
+          <div id="liveMap"></div>
+          <span class="map-badge"><span class="pulse-dot"></span> En vivo</span>
+          <div class="map-fallback" id="mapFallback" hidden>
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 21s7-7.2 7-12a7 7 0 10-14 0c0 4.8 7 12 7 12z"/><circle cx="12" cy="9" r="2.5"/></svg>
+            Activa la ubicación de tu navegador para verte en el mapa.
+          </div>
         </div>
 
+        <div class="location-details">
+          <div class="info-card">
+            <h3>Horarios</h3>
+            <p>Lunes a viernes · 9:00 – 19:00<br>Sábados · 9:00 – 14:00</p>
+          </div>
+          <div class="info-card">
+            <h3>Dirección</h3>
+            <p>Consultorio Vitalis<br>Dirección de ejemplo, Oaxaca de Juárez</p>
+          </div>
+          <div class="info-card">
+            <h3>Contacto</h3>
+            <p>Tel. 951 000 0000<br><a href="mailto:contacto@vitalis-ejemplo.mx">contacto@vitalis-ejemplo.mx</a></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div><!-- /view-home -->
+
+<!-- ============ VISTA: ACCESO ============ -->
+<div class="view" id="view-acceso" data-view="acceso" hidden>
+  <div class="access-page">
+    <div class="access-shell">
+      <div class="access-card">
+        <span class="brand" style="display:flex; justify-content:center;">
+          <span class="brand-mark" aria-hidden="true" style="color:var(--clay)">
+            <svg viewBox="0 0 40 40" width="30" height="30">
+              <circle cx="20" cy="20" r="18" fill="none" stroke="currentColor" stroke-width="1.5"/>
+              <path d="M12 22c2-6 4-9 8-9s6 3 8 9" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+              <circle cx="20" cy="13" r="2.4" fill="currentColor"/>
+            </svg>
+          </span>
+          <span class="brand-name">Vitalis</span>
+        </span>
+        <h1>Bienvenido de vuelta</h1>
+        <p class="role-label" id="roleLabel">Acceso de cliente</p>
+
         <form class="access-form" id="accessForm">
-          <div class="field">
+          <div class="field field-full">
             <label for="accessEmail">Correo</label>
             <input type="email" id="accessEmail" required placeholder="tucorreo@ejemplo.com">
           </div>
-          <div class="field">
+          <div class="field field-full">
             <label for="accessPass">Contraseña</label>
             <input type="password" id="accessPass" required placeholder="••••••••">
           </div>
@@ -316,37 +335,63 @@
             a la verificación de usuarios en la base de datos.
           </p>
         </form>
-      </div>
-    </div>
-  </section>
 
-  <!-- ============ INFO / CONTACTO ============ -->
-  <section class="info" id="contacto">
-    <div class="wrap info-grid">
-      <div class="info-card">
-        <h3>Horarios</h3>
-        <p>Lunes a viernes · 9:00 – 19:00<br>Sábados · 9:00 – 14:00</p>
-      </div>
-      <div class="info-card">
-        <h3>Ubicación</h3>
-        <p>Consultorio Vitalis<br>Dirección de ejemplo, Oaxaca de Juárez</p>
-      </div>
-      <div class="info-card">
-        <h3>Contacto</h3>
-        <p>Tel. 951 000 0000<br>contacto@vitalis-ejemplo.mx</p>
+        <!-- El acceso de administrador queda deliberadamente discreto:
+             no hay pestañas visibles, solo este enlace pequeño. -->
+        <div class="access-switch">
+          <button type="button" class="btn-quiet" id="adminSwitch">¿Eres administrador? Entra aquí</button>
+          <button type="button" class="btn-quiet" id="backToClient" hidden>Volver a acceso de cliente</button>
+        </div>
       </div>
     </div>
-  </section>
+  </div>
+</div><!-- /view-acceso -->
+
+<!-- ============ VISTA: AGENDA (calendario completo) ============ -->
+<div class="view" id="view-agenda" data-view="agenda" hidden>
+  <div class="agenda-page">
+    <div class="wrap">
+      <div class="agenda-head">
+        <div>
+          <p class="eyebrow">Tu agenda</p>
+          <h2 class="section-title">Elige y confirma tu horario</h2>
+          <span class="session-note">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 6L9 17l-5-5"/></svg>
+            Vista visible solo con sesión iniciada — se conectará a la verificación real después.
+          </span>
+        </div>
+      </div>
+
+      <div class="hold-banner" id="holdBanner" hidden>
+        <span>Reservado temporalmente: <strong></strong> — se libera en</span>
+        <span class="hold-time">05:00</span>
+      </div>
+
+      <div id="calendarFull"></div>
+    </div>
+  </div>
+</div><!-- /view-agenda -->
 
 </main>
 
-<footer class="site-footer">
+<footer class="site-footer" id="siteFooter">
   <div class="wrap footer-inner">
     <span>© 2026 Vitalis. Sistema de agendas — versión de diseño.</span>
     <div class="footer-links">
-      <a href="#servicios">Servicios</a>
-      <a href="#agenda">Agendar</a>
-      <a href="#acceso">Acceso</a>
+      <a href="#servicios" data-nav="home">Servicios</a>
+      <a href="#agenda" data-nav="home">Agendar</a>
+      <button class="btn-quiet" style="text-decoration:none;" data-nav="acceso">Acceso</button>
+    </div>
+    <div class="footer-social">
+      <a href="https://facebook.com" target="_blank" rel="noopener" aria-label="Facebook">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M13.5 22v-8.5H16l.4-3.3h-2.9V8.2c0-.96.27-1.6 1.66-1.6H16.5V3.6C16.2 3.56 15.2 3.5 14 3.5c-2.5 0-4.2 1.5-4.2 4.4v2.3H7.4v3.3H9.8V22h3.7z"/></svg>
+      </a>
+      <a href="https://instagram.com" target="_blank" rel="noopener" aria-label="Instagram">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3.5" y="3.5" width="17" height="17" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.2" cy="6.8" r="1"/></svg>
+      </a>
+      <a href="https://wa.me/529510000000" target="_blank" rel="noopener" aria-label="WhatsApp">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3.5a8.4 8.4 0 00-7.2 12.7L3.5 20.5l4.4-1.2A8.4 8.4 0 1012 3.5zm0 1.7a6.7 6.7 0 013.4 12.5l-.3.2.3 1.2-1.2-.3-.2.1a6.7 6.7 0 01-2-.3A6.7 6.7 0 0112 5.2zm-3.1 3.5c-.2 0-.5.1-.6.4-.2.2-.7.7-.7 1.7s.7 2 .8 2.1c.1.1 1.5 2.5 3.8 3.4 1.9.8 2.3.6 2.7.6.4 0 1.3-.5 1.5-1s.2-.9.1-1c-.1-.1-.2-.2-.5-.3l-1.5-.7c-.2-.1-.4-.1-.5.1l-.6.8c-.1.1-.2.2-.4.1-.2-.1-.9-.3-1.7-1.1-.6-.6-1-1.3-1.2-1.5-.1-.2 0-.3.1-.4l.4-.5c.1-.1.1-.3.1-.4 0-.1-.5-1.3-.7-1.8-.2-.4-.4-.4-.5-.4h-.5z"/></svg>
+      </a>
     </div>
   </div>
 </footer>

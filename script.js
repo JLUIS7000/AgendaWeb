@@ -1,348 +1,302 @@
-/* =========================================================
-   VITALIS — script.js
-   Calendario con FullCalendar. Los bloques marcados con
-   "// PHP:" son los puntos exactos donde reemplazas datos
-   de ejemplo por llamadas fetch() a tus endpoints reales
-   (ej. api/eventos.php, api/holds.php, api/citas.php).
+/* ============================================================
+   VITALIS — interacciones de interfaz
+   Nota: esto es solo capa visual/UX. La lógica real de reservas,
+   autenticación y verificación de usuarios se conecta después
+   (PHP + base de datos). Aquí todo se simula en el cliente.
+   ============================================================ */
 
-   IMPORTANTE sobre el conteo de 5 minutos:
-   El temporizador de este archivo es SOLO visual, para que
-   el usuario sepa cuánto tiempo le queda. La prevención real
-   de citas duplicadas debe vivir en el backend: al seleccionar
-   un horario, PHP debe insertar un registro en una tabla
-   `reservas_temporales` con una columna `expira_en`
-   (NOW() + INTERVAL 5 MINUTE), y esa fila debe bloquear el
-   horario para cualquier otra persona (por ejemplo con un
-   índice único sobre servicio+fecha+hora, o una transacción
-   con bloqueo de fila). Un proceso programado (cron) o una
-   verificación en cada consulta debe borrar las reservas
-   vencidas para liberar el horario automáticamente.
-   ========================================================= */
-
-document.addEventListener('DOMContentLoaded', () => {
-
-  /* ---------- Menú móvil ---------- */
-  const navToggle = document.getElementById('navToggle');
-  const mainNav = document.getElementById('mainNav');
-  navToggle.addEventListener('click', () => {
-    const isOpen = mainNav.classList.toggle('is-open');
-    navToggle.setAttribute('aria-expanded', isOpen);
-  });
-
-  /* ---------- Servicios — expandir detalles ---------- */
-  document.querySelectorAll('.service-toggle').forEach(btn => {
-    const details = btn.parentElement.querySelector('.service-details');
-    btn.addEventListener('click', () => {
-      const expanded = btn.getAttribute('aria-expanded') === 'true';
-      btn.setAttribute('aria-expanded', String(!expanded));
-      details.style.maxHeight = expanded ? null : details.scrollHeight + 'px';
-      btn.firstChild.textContent = expanded ? 'Ver detalles ' : 'Ocultar detalles ';
-    });
-  });
-
-  /* =========================================================
-     CONFIGURACIÓN DE SERVICIOS
-     ========================================================= */
-  const SERVICE_DURATIONS = {
-    'fisioterapia': 50,
-    'masoterapia': 40,
-    'rehab-deportiva': 60,
-    'nutricion': 45
-  };
-  const SERVICE_LABELS = {
-    'fisioterapia': 'Fisioterapia',
-    'masoterapia': 'Masoterapia',
-    'rehab-deportiva': 'Rehabilitación deportiva',
-    'nutricion': 'Consulta nutricional'
-  };
-
-  const bookingServiceEl = document.getElementById('bookingService');
-
-  /* =========================================================
-     EVENTOS DE EJEMPLO (simulan lo que hoy vendría de tu BD)
-     PHP: reemplaza generarEventosSimulados() por un fetch a
-     api/eventos.php?servicio=X&start=Y&end=Z que devuelva JSON
-     con las citas ya confirmadas de ese servicio.
-     ========================================================= */
-  function generarEventosSimulados(servicio, rangeStart, rangeEnd){
-    const eventos = [];
-    const dur = SERVICE_DURATIONS[servicio] || 50;
-    const horasBase = [9, 10, 11, 13, 16, 17];
-    // Semilla simple para que cada servicio tenga horarios "ocupados" distintos y estables
-    let seed = servicio.split('').reduce((a,c) => a + c.charCodeAt(0), 0);
-
-    const cursor = new Date(rangeStart);
-    let dia = 0;
-    while (cursor < rangeEnd) {
-      const dow = cursor.getDay();
-      if (dow !== 0) { // sin citas los domingos
-        const nOcupados = (seed + dia) % 3; // 0,1 o 2 ocupados por día
-        for (let i = 0; i < nOcupados; i++) {
-          const hora = horasBase[(seed + dia + i * 3) % horasBase.length];
-          const start = new Date(cursor);
-          start.setHours(hora, 0, 0, 0);
-          const end = new Date(start.getTime() + dur * 60000);
-          eventos.push({
-            id: `busy-${servicio}-${start.toISOString()}`,
-            title: 'Ocupado',
-            start: start.toISOString(),
-            end: end.toISOString(),
-            classNames: ['evt-ocupado'],
-            editable: false,
-            extendedProps: { tipo: 'ocupado', servicio }
-          });
-        }
-      }
-      cursor.setDate(cursor.getDate() + 1);
-      dia++;
-    }
-    return eventos;
-  }
-
-  /* =========================================================
-     CALENDARIO
-     ========================================================= */
-  const calendarEl = document.getElementById('calendar');
-  let holdEvent = null; // referencia al evento de reserva temporal activo
-
-  const calendar = new FullCalendar.Calendar(calendarEl, {
-    locale: 'es',
-    height: '100%',
-    initialView: 'timeGridWeek',
-    headerToolbar: {
-      left: 'prev,next today',
-      center: 'title',
-      right: 'dayGridMonth,timeGridWeek,timeGridDay'
-    },
-    buttonText: { today: 'Hoy', month: 'Mes', week: 'Semana', day: 'Día' },
-    firstDay: 1,
-    slotMinTime: '09:00:00',
-    slotMaxTime: '19:00:00',
-    allDaySlot: false,
-    nowIndicator: true,
-    selectable: true,
-    selectMirror: true,
-    selectOverlap: false,
-    businessHours: [
-      { daysOfWeek: [1,2,3,4,5], startTime: '09:00', endTime: '19:00' },
-      { daysOfWeek: [6], startTime: '09:00', endTime: '14:00' }
-    ],
-    selectConstraint: 'businessHours',
-
-    /* PHP: fuente de eventos — reemplazar por fetch real */
-    events: function (fetchInfo, successCallback, failureCallback) {
-      const servicio = bookingServiceEl.value;
-
-      // PHP: const url = `api/eventos.php?servicio=${servicio}&start=${fetchInfo.startStr}&end=${fetchInfo.endStr}`;
-      //      fetch(url).then(r => r.json()).then(successCallback).catch(failureCallback);
-
-      try {
-        const eventos = generarEventosSimulados(servicio, fetchInfo.start, fetchInfo.end);
-        successCallback(eventos);
-      } catch (err) {
-        failureCallback(err);
-      }
-    },
-
-    select: function (info) {
-      const servicio = bookingServiceEl.value;
-      const dur = SERVICE_DURATIONS[servicio] || 50;
-      const start = info.start;
-      const end = new Date(start.getTime() + dur * 60000);
-
-      calendar.unselect();
-
-      if (info.view.type === 'dayGridMonth') {
-        // En vista mensual solo se elige el día; se cambia a vista de día para escoger hora.
-        calendar.changeView('timeGridDay', start);
-        return;
-      }
-
-      iniciarReservaTemporal(servicio, start, end);
-    },
-
-    eventClick: function (info) {
-      if (info.event.extendedProps.tipo === 'hold') {
-        // Click sobre tu propia reserva temporal: reabre el panel
-        abrirPanelHold();
-      }
-    }
-  });
-
-  calendar.render();
-
-  bookingServiceEl.addEventListener('change', () => {
-    cancelarReservaTemporal({ silencioso: true });
-    calendar.refetchEvents();
-  });
-
-  /* =========================================================
-     RESERVA TEMPORAL DE 5 MINUTOS
-     ========================================================= */
-  const HOLD_SECONDS = 5 * 60;
-  const RING_CIRCUMFERENCE = 100.5;
-
-  const holdPanel = document.getElementById('holdPanel');
-  const holdSummary = document.getElementById('holdSummary');
-  const holdForm = document.getElementById('holdForm');
-  const holdTimeLabel = document.getElementById('holdTimeLabel');
-  const holdRingFg = document.getElementById('holdRingFg');
-  const holdCancelBtn = document.getElementById('holdCancel');
-  const holdCloseBtn = document.getElementById('holdClose');
-
-  let holdTimer = null;
-  let holdSecondsLeft = HOLD_SECONDS;
-  let holdData = null; // { servicio, start, end }
-
-  function iniciarReservaTemporal(servicio, start, end){
-    // Si ya había una reserva activa, se libera primero.
-    cancelarReservaTemporal({ silencioso: true });
-
-    /* PHP: aquí se debe POSTear a api/holds.php ANTES de mostrar
-       el panel, para que el backend registre el bloqueo real:
-       fetch('api/holds.php', { method:'POST', body: JSON.stringify({
-         servicio, inicio: start.toISOString(), fin: end.toISOString()
-       })})
-       .then(r => r.json())
-       .then(resp => { if (!resp.ok) { alert('Ese horario ya no está disponible'); calendar.refetchEvents(); return; }
-                        holdData = { servicio, start, end, holdId: resp.holdId };
-                        mostrarPanelHold(); })
-       Por ahora, como no hay backend conectado, se simula localmente: */
-
-    holdData = { servicio, start, end };
-
-    holdEvent = calendar.addEvent({
-      id: 'hold-actual',
-      title: 'Reservado (temporal)',
-      start,
-      end,
-      classNames: ['evt-hold'],
-      editable: false,
-      extendedProps: { tipo: 'hold' }
-    });
-
-    mostrarPanelHold();
-  }
-
-  function mostrarPanelHold(){
-    const { servicio, start, end } = holdData;
-    const fechaTexto = start.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
-    const horaInicio = start.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
-    const horaFin = end.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
-
-    holdSummary.textContent = `${SERVICE_LABELS[servicio]} · ${fechaTexto}, ${horaInicio} – ${horaFin}`;
-
-    holdSecondsLeft = HOLD_SECONDS;
-    actualizarRelojHold();
-    holdPanel.hidden = false;
-    holdPanel.classList.remove('is-expiring');
-
-    clearInterval(holdTimer);
-    holdTimer = setInterval(() => {
-      holdSecondsLeft--;
-      actualizarRelojHold();
-      if (holdSecondsLeft <= 60) holdPanel.classList.add('is-expiring');
-      if (holdSecondsLeft <= 0) {
-        cancelarReservaTemporal({ expirado: true });
-      }
-    }, 1000);
-  }
-
-  function abrirPanelHold(){
-    if (holdData) holdPanel.hidden = false;
-  }
-
-  function actualizarRelojHold(){
-    const m = Math.floor(holdSecondsLeft / 60);
-    const s = holdSecondsLeft % 60;
-    holdTimeLabel.textContent = `${m}:${String(s).padStart(2, '0')}`;
-    const progreso = holdSecondsLeft / HOLD_SECONDS;
-    holdRingFg.style.strokeDashoffset = String(RING_CIRCUMFERENCE * (1 - progreso));
-  }
-
-  function cancelarReservaTemporal({ expirado = false, silencioso = false } = {}){
-    clearInterval(holdTimer);
-    holdTimer = null;
-
-    if (holdEvent) {
-      /* PHP: si había un hold activo, avisar al backend para borrarlo:
-         fetch('api/holds.php?id=' + holdData.holdId, { method:'DELETE' }); */
-      holdEvent.remove();
-      holdEvent = null;
-    }
-
-    holdPanel.hidden = true;
-    holdPanel.classList.remove('is-expiring');
-    holdForm.reset();
-    holdData = null;
-
-    if (expirado && !silencioso) {
-      alert('El tiempo de reserva expiró. El horario quedó disponible de nuevo, puedes elegir otro.');
-    }
-  }
-
-  holdCancelBtn.addEventListener('click', () => cancelarReservaTemporal());
-  holdCloseBtn.addEventListener('click', () => cancelarReservaTemporal());
-
-  holdForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    if (!holdData) return;
-
-    /* PHP: aquí se envía el formulario completo a api/citas.php (POST)
-       con servicio, inicio, fin, datos del cliente y el holdId, para:
-       1) insertar la cita definitiva en la tabla `citas`
-       2) insertar o actualizar el cliente en la tabla `clientes`
-       3) borrar la fila correspondiente en `reservas_temporales`
-       El backend responde { ok: true } o un error si alguien más
-       confirmó ese mismo horario primero. */
-
-    const nombre = document.getElementById('bkName').value;
-    const { servicio, start } = holdData;
-    const fechaTexto = start.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
-    const horaTexto = start.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
-
-    clearInterval(holdTimer);
-    holdTimer = null;
-    holdPanel.hidden = true;
-    holdForm.reset();
-    holdEvent = null; // se reemplaza por el evento confirmado al refrescar
-    holdData = null;
-
-    calendar.refetchEvents();
-
-    alert(`Cita confirmada para ${nombre}: ${SERVICE_LABELS[servicio]} el ${fechaTexto} a las ${horaTexto}.`);
-  });
-
-  /* =========================================================
-     ACCESO — tabs cliente / admin
-     ========================================================= */
-  const accessTabs = document.querySelectorAll('.access-tab');
-  const accessSubmit = document.getElementById('accessSubmit');
-  const accessForm = document.getElementById('accessForm');
-
-  accessTabs.forEach(tab => {
-    tab.addEventListener('click', () => {
-      accessTabs.forEach(t => { t.classList.remove('is-active'); t.setAttribute('aria-selected', 'false'); });
-      tab.classList.add('is-active');
-      tab.setAttribute('aria-selected', 'true');
-      const role = tab.dataset.role;
-      accessSubmit.textContent = role === 'admin' ? 'Entrar como administrador' : 'Entrar como cliente';
-      accessForm.dataset.role = role;
-    });
-  });
-
-  accessForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    /* PHP: enviar { email, password, role } a api/login.php vía POST.
-       El backend valida contra la tabla `usuarios` (contraseñas
-       hasheadas) y responde con sesión/token. Según el rol, se
-       redirige a panel-cliente.php o panel-admin.php. */
-    const role = accessForm.dataset.role || 'cliente';
-    alert(
-      role === 'admin'
-        ? 'Vista de administrador: aquí cargará el panel de gestión de citas, servicios y clientes.'
-        : 'Vista de cliente: aquí cargará tu historial de citas y paquetes.'
-    );
-  });
-
+document.addEventListener("DOMContentLoaded", () => {
+  initRouter();
+  initNavToggle();
+  initActiveNav();
+  initServiceCards();
+  initCalendarPreview();
+  initLiveMap();
+  initAccessPage();
 });
+
+/* ---------- router de vistas ----------
+   Todo vive en index.html. Cambiar de vista oculta la anterior y
+   muestra solo la elegida (limpia header/nav/footer según el caso),
+   sin recargar la página. El hash permite compartir el enlace y
+   que el botón "atrás" del navegador funcione. */
+let calendarFullInstance = null;
+
+function initRouter() {
+  document.body.addEventListener("click", (e) => {
+    const trigger = e.target.closest("[data-nav]");
+    if (!trigger) return;
+
+    const href = trigger.getAttribute("href");
+    const isSectionAnchor = href && href.startsWith("#") && href.length > 1;
+
+    if (isSectionAnchor) {
+      // Enlace a una sección de "Inicio" (ej. #servicios): si ya estamos
+      // en Inicio, se deja el desplazamiento normal del navegador.
+      // Si estamos en otra vista, primero mostramos Inicio y luego saltamos.
+      if (viewFromHash() !== "home") {
+        e.preventDefault();
+        applyView("home");
+        window.location.hash = href;
+      }
+      return;
+    }
+
+    e.preventDefault();
+    goToView(trigger.dataset.nav);
+  });
+
+  window.addEventListener("hashchange", () => {
+    const raw = window.location.hash.replace(/^#\/?/, "");
+    applyView(viewFromHash());
+    // Solo forzamos scroll arriba cuando el hash es una vista (home/acceso/agenda),
+    // no cuando es un ancla de sección como #servicios (ese scroll lo hace el navegador).
+    if (raw === "" || ["home", "acceso", "agenda"].includes(raw)) {
+      window.scrollTo({ top: 0, behavior: "auto" });
+    }
+  });
+  applyView(viewFromHash());
+}
+
+function viewFromHash() {
+  const hash = window.location.hash.replace(/^#\/?/, "");
+  return ["home", "acceso", "agenda"].includes(hash) ? hash : "home";
+}
+
+function goToView(name) {
+  window.location.hash = name === "home" ? "" : `/${name}`;
+  applyView(name);
+  window.scrollTo({ top: 0, behavior: "auto" });
+}
+
+function applyView(name) {
+  document.querySelectorAll(".view").forEach((v) => { v.hidden = v.dataset.view !== name; });
+
+  const isHome = name === "home";
+  const mainNav = document.getElementById("mainNav");
+  const navAcceder = document.getElementById("navAcceder");
+  const navVolver = document.getElementById("navVolver");
+  const navAgendarCta = document.getElementById("navAgendarCta");
+  const footer = document.getElementById("siteFooter");
+
+  if (mainNav) mainNav.hidden = !isHome;
+  if (navAcceder) navAcceder.hidden = !isHome;
+  if (navAgendarCta) navAgendarCta.hidden = !isHome;
+  if (navVolver) navVolver.hidden = isHome;
+  if (footer) footer.hidden = !isHome;
+
+  if (name === "agenda") ensureCalendarFull();
+}
+
+/* ---------- menú móvil ---------- */
+function initNavToggle() {
+  const toggle = document.getElementById("navToggle");
+  const nav = document.getElementById("mainNav");
+  if (!toggle || !nav) return;
+  toggle.addEventListener("click", () => {
+    const open = nav.classList.toggle("is-open");
+    toggle.setAttribute("aria-expanded", String(open));
+  });
+}
+
+/* ---------- resalta el link activo del nav al hacer scroll ---------- */
+function initActiveNav() {
+  const links = document.querySelectorAll(".main-nav a");
+  const sections = Array.from(links)
+    .map((l) => document.querySelector(l.getAttribute("href")))
+    .filter(Boolean);
+  if (!sections.length) return;
+
+  const observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        links.forEach((l) => l.classList.remove("is-active"));
+        const match = document.querySelector(`.main-nav a[href="#${entry.target.id}"]`);
+        if (match) match.classList.add("is-active");
+      });
+    },
+    { rootMargin: "-40% 0px -55% 0px" }
+  );
+  sections.forEach((s) => observer.observe(s));
+}
+
+/* ---------- tarjetas de servicio expandibles ---------- */
+function initServiceCards() {
+  document.querySelectorAll(".service-toggle").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const card = btn.closest(".service-card");
+      const expanded = btn.getAttribute("aria-expanded") === "true";
+      btn.setAttribute("aria-expanded", String(!expanded));
+      card.classList.toggle("is-open", !expanded);
+      btn.childNodes[0].textContent = !expanded ? "Ocultar detalles " : "Ver detalles ";
+    });
+  });
+}
+
+/* ---------- vista previa de calendario en la página principal ----------
+   Solo lectura: sirve para mostrar cómo se ve la disponibilidad.
+   Al hacer clic redirige a la página de acceso, ya que agendar
+   requiere una sesión iniciada. */
+function initCalendarPreview() {
+  const el = document.getElementById("calendar");
+  if (!el || typeof FullCalendar === "undefined") return;
+
+  const demoEvents = buildDemoEvents();
+  const calendar = new FullCalendar.Calendar(el, {
+    locale: "es",
+    headerToolbar: { left: "prev,next today", center: "title", right: "dayGridMonth,timeGridWeek" },
+    initialView: "timeGridWeek",
+    height: "auto",
+    slotMinTime: "08:00:00",
+    slotMaxTime: "20:00:00",
+    allDaySlot: false,
+    selectable: false,
+    editable: false,
+    events: demoEvents,
+    eventClassNames: (arg) => (arg.event.extendedProps.busy ? "is-busy" : "is-free"),
+    dateClick: () => goToView("acceso"),
+    eventClick: () => goToView("acceso"),
+  });
+  calendar.render();
+}
+
+/* ---------- calendario completo (vista "agenda") ----------
+   Se crea la primera vez que se entra a la vista (mientras está
+   oculta, FullCalendar mediría 0 de ancho) y luego solo se
+   actualiza el tamaño en las siguientes visitas. */
+function ensureCalendarFull() {
+  const el = document.getElementById("calendarFull");
+  if (!el || typeof FullCalendar === "undefined") return;
+
+  if (calendarFullInstance) {
+    calendarFullInstance.updateSize();
+    return;
+  }
+
+  const demoEvents = buildDemoEvents();
+  const holdBanner = document.getElementById("holdBanner");
+
+  calendarFullInstance = new FullCalendar.Calendar(el, {
+    locale: "es",
+    headerToolbar: { left: "prev,next today", center: "title", right: "dayGridMonth,timeGridWeek,timeGridDay" },
+    initialView: "timeGridWeek",
+    height: "auto",
+    slotMinTime: "08:00:00",
+    slotMaxTime: "20:00:00",
+    allDaySlot: false,
+    events: demoEvents,
+    eventClassNames: (arg) => (arg.event.extendedProps.busy ? "is-busy" : "is-free"),
+    dateClick: (info) => {
+      if (holdBanner) {
+        holdBanner.hidden = false;
+        holdBanner.querySelector("strong").textContent = info.dateStr;
+        startHoldCountdown(holdBanner);
+      }
+    },
+  });
+  calendarFullInstance.render();
+}
+
+function buildDemoEvents() {
+  const today = new Date();
+  const day = (offset) => {
+    const d = new Date(today);
+    d.setDate(d.getDate() + offset);
+    return d.toISOString().slice(0, 10);
+  };
+  return [
+    { title: "Ocupado", start: `${day(0)}T09:00:00`, end: `${day(0)}T10:00:00`, busy: true },
+    { title: "Ocupado", start: `${day(1)}T11:00:00`, end: `${day(1)}T12:00:00`, busy: true },
+    { title: "Disponible", start: `${day(1)}T15:00:00`, end: `${day(1)}T16:00:00`, busy: false },
+    { title: "Ocupado", start: `${day(2)}T09:30:00`, end: `${day(2)}T10:30:00`, busy: true },
+    { title: "Disponible", start: `${day(3)}T13:00:00`, end: `${day(3)}T14:00:00`, busy: false },
+    { title: "Ocupado", start: `${day(4)}T17:00:00`, end: `${day(4)}T18:00:00`, busy: true },
+  ];
+}
+
+function startHoldCountdown(banner) {
+  const timeEl = banner.querySelector(".hold-time");
+  let remaining = 5 * 60;
+  clearInterval(banner._t);
+  banner._t = setInterval(() => {
+    remaining -= 1;
+    const m = String(Math.floor(remaining / 60)).padStart(2, "0");
+    const s = String(remaining % 60).padStart(2, "0");
+    if (timeEl) timeEl.textContent = `${m}:${s}`;
+    if (remaining <= 0) {
+      clearInterval(banner._t);
+      banner.hidden = true;
+    }
+  }, 1000);
+}
+
+/* ---------- ubicación en tiempo real (Leaflet + Geolocation API) ---------- */
+function initLiveMap() {
+  const container = document.getElementById("liveMap");
+  const fallback = document.getElementById("mapFallback");
+  if (!container || typeof L === "undefined") return;
+
+  const clinic = { lat: 17.0654, lng: -96.7237 }; // Oaxaca de Juárez (referencia)
+  const map = L.map(container, { zoomControl: true, attributionControl: false }).setView([clinic.lat, clinic.lng], 15);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19 }).addTo(map);
+
+  const clinicIcon = L.divIcon({ className: "", html: '<div style="width:16px;height:16px;border-radius:50%;background:#B8492F;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.35)"></div>', iconSize: [16, 16] });
+  L.marker([clinic.lat, clinic.lng], { icon: clinicIcon }).addTo(map).bindPopup("Consultorio Vitalis");
+
+  if (!navigator.geolocation) {
+    if (fallback) fallback.hidden = false;
+    return;
+  }
+
+  const userIcon = L.divIcon({ className: "", html: '<div style="width:14px;height:14px;border-radius:50%;background:#1F9D55;border:3px solid #fff;box-shadow:0 0 0 4px rgba(31,157,85,.25)"></div>', iconSize: [14, 14] });
+  let userMarker = null;
+
+  navigator.geolocation.watchPosition(
+    (pos) => {
+      const { latitude, longitude } = pos.coords;
+      if (!userMarker) {
+        userMarker = L.marker([latitude, longitude], { icon: userIcon }).addTo(map).bindPopup("Tu ubicación");
+        const bounds = L.latLngBounds([[clinic.lat, clinic.lng], [latitude, longitude]]);
+        map.fitBounds(bounds, { padding: [40, 40] });
+      } else {
+        userMarker.setLatLng([latitude, longitude]);
+      }
+    },
+    () => {
+      if (fallback) fallback.hidden = false;
+    },
+    { enableHighAccuracy: true, maximumAge: 5000 }
+  );
+}
+
+/* ---------- página de acceso: alternar cliente / administrador ---------- */
+function initAccessPage() {
+  const form = document.getElementById("accessForm");
+  if (!form) return;
+
+  const roleLabel = document.getElementById("roleLabel");
+  const submitBtn = document.getElementById("accessSubmit");
+  const adminSwitch = document.getElementById("adminSwitch");
+  const backToClient = document.getElementById("backToClient");
+  let role = "cliente";
+
+  function render() {
+    roleLabel.textContent = role === "cliente" ? "Acceso de cliente" : "Acceso de administrador";
+    submitBtn.textContent = role === "cliente" ? "Entrar como cliente" : "Entrar como administrador";
+    adminSwitch.hidden = role !== "cliente";
+    backToClient.hidden = role !== "admin";
+  }
+
+  adminSwitch?.addEventListener("click", () => { role = "admin"; render(); });
+  backToClient?.addEventListener("click", () => { role = "cliente"; render(); });
+
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    // La verificación real contra la base de datos se conecta después.
+    // Por ahora, "entrar" solo cambia a la vista de agenda dentro de la misma página.
+    goToView("agenda");
+  });
+
+  render();
+}
