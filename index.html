@@ -34,14 +34,12 @@
     <nav class="main-nav" id="mainNav">
       <a href="#servicios" data-nav="home">Inicio</a>
       <a href="#como-funciona" data-nav="home">Consulta</a>
-      <a href="#agenda" data-nav="home">Agendar</a>
       <a href="#contacto" data-nav="home">Contacto</a>
     </nav>
 
     <div class="header-actions">
       <button class="btn btn-ghost btn-sm" id="navAcceder" data-nav="acceso">Acceder</button>
       <button class="btn btn-ghost btn-sm" id="navVolver" data-nav="home" hidden>← Volver al inicio</button>
-      <a href="#agenda" class="btn btn-primary btn-sm" id="navAgendarCta" data-nav="home">Agendar cita</a>
       <button class="nav-toggle" id="navToggle" aria-label="Abrir menú" aria-expanded="false">
         <span></span><span></span><span></span>
       </button>
@@ -64,7 +62,7 @@
         Consulta el calendario completo, elige tu horario y confírmalo antes de que se libere.
       </p>
       <div class="hero-ctas center">
-        <a href="#agenda" class="btn btn-primary">Ver disponibilidad</a>
+        <button class="btn btn-primary" data-nav="acceso">Ver disponibilidad</button>
         <a href="#servicios" class="btn btn-ghost">Conocer los beneficios</a>
       </div>
       <svg class="motif-arc" width="120" height="40" viewBox="0 0 120 40" fill="none" aria-hidden="true">
@@ -109,7 +107,7 @@
               <li>Incluye: valoración inicial, plan de tratamiento y ejercicios en casa</li>
               <li>Recomendado para: lesiones deportivas, dolor crónico, post-cirugía</li>
             </ul>
-            <a href="#agenda" class="link-cta">Agendar fisioterapia →</a>
+            <button class="link-cta" data-nav="acceso">Agendar fisioterapia →</button>
           </div>
         </article>
 
@@ -132,7 +130,7 @@
               <li>Incluye: masaje terapéutico dirigido</li>
               <li>Recomendado para: estrés muscular, contracturas</li>
             </ul>
-            <a href="#agenda" class="link-cta">Agendar masoterapia →</a>
+            <button class="link-cta" data-nav="acceso">Agendar masoterapia →</button>
           </div>
         </article>
 
@@ -155,7 +153,7 @@
               <li>Incluye: plan de fortalecimiento progresivo</li>
               <li>Recomendado para: deportistas en recuperación</li>
             </ul>
-            <a href="#agenda" class="link-cta">Agendar rehabilitación →</a>
+            <button class="link-cta" data-nav="acceso">Agendar rehabilitación →</button>
           </div>
         </article>
 
@@ -178,7 +176,7 @@
               <li>Incluye: plan alimenticio y seguimiento mensual</li>
               <li>Recomendado para: cualquier paciente en tratamiento</li>
             </ul>
-            <a href="#agenda" class="link-cta">Agendar consulta →</a>
+            <button class="link-cta" data-nav="acceso">Agendar consulta →</button>
           </div>
         </article>
       </div>
@@ -211,57 +209,14 @@
     </div>
   </section>
 
-  <!-- ============ CALENDARIO (vista previa) ============ -->
-  <section class="booking" id="agenda">
-    <div class="wrap booking-head">
-      <p class="eyebrow">Agenda tu cita</p>
-      <h2>Calendario en tiempo real</h2>
-      <p class="section-lead">
-        Esta es una vista previa de la disponibilidad. El calendario completo, donde puedes
-        elegir y confirmar tu horario, se abre en una página aparte al iniciar sesión.
-      </p>
-
-      <div class="booking-toolbar">
-        <div class="field field-inline">
-          <label for="bookingService">Servicio</label>
-          <select id="bookingService">
-            <option value="fisioterapia">Fisioterapia — 50 min</option>
-            <option value="masoterapia">Masoterapia — 40 min</option>
-            <option value="rehab-deportiva">Rehabilitación deportiva — 60 min</option>
-            <option value="nutricion">Consulta nutricional — 45 min</option>
-          </select>
-        </div>
-        <div class="booking-legend">
-          <span><i class="dot dot-free"></i> Disponible</span>
-          <span><i class="dot dot-busy"></i> Ocupado</span>
-          <span><i class="dot dot-hold"></i> Tu reserva temporal</span>
-        </div>
-      </div>
-    </div>
-
-    <div class="calendar-shell">
-      <div id="calendar"></div>
-      <div class="calendar-gate">
-        <div class="calendar-gate-card">
-          <svg class="gate-icon" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
-            <rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 018 0v3"/>
-          </svg>
-          <h3>Inicia sesión para agendar</h3>
-          <p>El calendario completo, con selección y confirmación de horario, está disponible dentro de tu cuenta.</p>
-          <button class="btn btn-primary btn-block" data-nav="acceso">Acceder</button>
-        </div>
-      </div>
-    </div>
-  </section>
-
   <!-- ============ ACCESO ============ -->
   <section class="access-cta">
     <div class="wrap access-cta-card">
       <div>
         <h3>Tu cuenta, tu calendario</h3>
-        <p>Clientes y administradores acceden desde la misma puerta, con vistas distintas dentro del sistema.</p>
+        <p>Inicia sesión o crea tu cuenta para ver el calendario completo y elegir tu horario. Los administradores acceden por la misma puerta.</p>
       </div>
-      <button class="btn btn-primary" data-nav="acceso">Acceder</button>
+      <button class="btn btn-primary" data-nav="acceso">Ingresa como cliente</button>
     </div>
   </section>
 
@@ -269,17 +224,13 @@
   <section class="location" id="contacto">
     <div class="wrap">
       <p class="eyebrow">Ubicación</p>
-      <h2 class="section-title">Encuéntranos en tiempo real</h2>
-      <p class="section-lead">El mapa muestra el consultorio y, si compartes tu ubicación, tu posición actual para calcular la distancia.</p>
+      <h2 class="section-title">Encuéntranos en el mapa</h2>
+      <p class="section-lead">El mapa muestra la ubicación exacta del consultorio, siempre actualizada.</p>
 
       <div class="location-grid">
         <div class="map-card">
           <div id="liveMap"></div>
-          <span class="map-badge"><span class="pulse-dot"></span> En vivo</span>
-          <div class="map-fallback" id="mapFallback" hidden>
-            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 21s7-7.2 7-12a7 7 0 10-14 0c0 4.8 7 12 7 12z"/><circle cx="12" cy="9" r="2.5"/></svg>
-            Activa la ubicación de tu navegador para verte en el mapa.
-          </div>
+          <span class="map-badge"><span class="pulse-dot"></span> Consultorio Vitalis</span>
         </div>
 
         <div class="location-details">
@@ -317,10 +268,14 @@
           </span>
           <span class="brand-name">Vitalis</span>
         </span>
-        <h1>Bienvenido de vuelta</h1>
-        <p class="role-label" id="roleLabel">Acceso de cliente</p>
+        <h1>Bienvenido a Vitalis</h1>
+        <p class="role-label" id="roleLabel">Inicia sesión con tu cuenta</p>
 
         <form class="access-form" id="accessForm">
+          <div class="field field-full" id="fieldName" hidden>
+            <label for="accessName">Nombre completo</label>
+            <input type="text" id="accessName" placeholder="Tu nombre">
+          </div>
           <div class="field field-full">
             <label for="accessEmail">Correo</label>
             <input type="email" id="accessEmail" required placeholder="tucorreo@ejemplo.com">
@@ -329,18 +284,20 @@
             <label for="accessPass">Contraseña</label>
             <input type="password" id="accessPass" required placeholder="••••••••">
           </div>
-          <button type="submit" class="btn btn-primary btn-block" id="accessSubmit">Entrar como cliente</button>
+          <div class="field field-full" id="fieldConfirm" hidden>
+            <label for="accessConfirm">Confirmar contraseña</label>
+            <input type="password" id="accessConfirm" placeholder="••••••••">
+          </div>
+          <button type="submit" class="btn btn-primary btn-block" id="accessSubmit">Entrar</button>
           <p class="access-note">
             Este formulario es solo de interfaz. Al migrar a PHP, se conectará
-            a la verificación de usuarios en la base de datos.
+            a la verificación de usuarios en la base de datos. Clientes y
+            administradores inician sesión desde el mismo formulario.
           </p>
         </form>
 
-        <!-- El acceso de administrador queda deliberadamente discreto:
-             no hay pestañas visibles, solo este enlace pequeño. -->
         <div class="access-switch">
-          <button type="button" class="btn-quiet" id="adminSwitch">¿Eres administrador? Entra aquí</button>
-          <button type="button" class="btn-quiet" id="backToClient" hidden>Volver a acceso de cliente</button>
+          <button type="button" class="btn-quiet" id="toggleRegister">¿Primera vez? Crea tu cuenta</button>
         </div>
       </div>
     </div>
@@ -379,7 +336,6 @@
     <span>© 2026 Vitalis. Sistema de agendas — versión de diseño.</span>
     <div class="footer-links">
       <a href="#servicios" data-nav="home">Servicios</a>
-      <a href="#agenda" data-nav="home">Agendar</a>
       <button class="btn-quiet" style="text-decoration:none;" data-nav="acceso">Acceso</button>
     </div>
     <div class="footer-social">

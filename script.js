@@ -10,7 +10,6 @@ document.addEventListener("DOMContentLoaded", () => {
   initNavToggle();
   initActiveNav();
   initServiceCards();
-  initCalendarPreview();
   initLiveMap();
   initAccessPage();
 });
@@ -134,33 +133,6 @@ function initServiceCards() {
   });
 }
 
-/* ---------- vista previa de calendario en la página principal ----------
-   Solo lectura: sirve para mostrar cómo se ve la disponibilidad.
-   Al hacer clic redirige a la página de acceso, ya que agendar
-   requiere una sesión iniciada. */
-function initCalendarPreview() {
-  const el = document.getElementById("calendar");
-  if (!el || typeof FullCalendar === "undefined") return;
-
-  const demoEvents = buildDemoEvents();
-  const calendar = new FullCalendar.Calendar(el, {
-    locale: "es",
-    headerToolbar: { left: "prev,next today", center: "title", right: "dayGridMonth,timeGridWeek" },
-    initialView: "timeGridWeek",
-    height: "auto",
-    slotMinTime: "08:00:00",
-    slotMaxTime: "20:00:00",
-    allDaySlot: false,
-    selectable: false,
-    editable: false,
-    events: demoEvents,
-    eventClassNames: (arg) => (arg.event.extendedProps.busy ? "is-busy" : "is-free"),
-    dateClick: () => goToView("acceso"),
-    eventClick: () => goToView("acceso"),
-  });
-  calendar.render();
-}
-
 /* ---------- calendario completo (vista "agenda") ----------
    Se crea la primera vez que se entra a la vista (mientras está
    oculta, FullCalendar mediría 0 de ancho) y luego solo se
@@ -231,70 +203,61 @@ function startHoldCountdown(banner) {
   }, 1000);
 }
 
-/* ---------- ubicación en tiempo real (Leaflet + Geolocation API) ---------- */
+/* ---------- ubicación (solo el negocio) ----------
+   Por norma de privacidad, este mapa muestra únicamente la
+   ubicación fija del consultorio. No se solicita ni se usa la
+   ubicación del visitante para nada. */
 function initLiveMap() {
   const container = document.getElementById("liveMap");
-  const fallback = document.getElementById("mapFallback");
   if (!container || typeof L === "undefined") return;
 
   const clinic = { lat: 17.0654, lng: -96.7237 }; // Oaxaca de Juárez (referencia)
-  const map = L.map(container, { zoomControl: true, attributionControl: false }).setView([clinic.lat, clinic.lng], 15);
+  const map = L.map(container, { zoomControl: true, attributionControl: false }).setView([clinic.lat, clinic.lng], 16);
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19 }).addTo(map);
 
   const clinicIcon = L.divIcon({ className: "", html: '<div style="width:16px;height:16px;border-radius:50%;background:#B8492F;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.35)"></div>', iconSize: [16, 16] });
   L.marker([clinic.lat, clinic.lng], { icon: clinicIcon }).addTo(map).bindPopup("Consultorio Vitalis");
-
-  if (!navigator.geolocation) {
-    if (fallback) fallback.hidden = false;
-    return;
-  }
-
-  const userIcon = L.divIcon({ className: "", html: '<div style="width:14px;height:14px;border-radius:50%;background:#1F9D55;border:3px solid #fff;box-shadow:0 0 0 4px rgba(31,157,85,.25)"></div>', iconSize: [14, 14] });
-  let userMarker = null;
-
-  navigator.geolocation.watchPosition(
-    (pos) => {
-      const { latitude, longitude } = pos.coords;
-      if (!userMarker) {
-        userMarker = L.marker([latitude, longitude], { icon: userIcon }).addTo(map).bindPopup("Tu ubicación");
-        const bounds = L.latLngBounds([[clinic.lat, clinic.lng], [latitude, longitude]]);
-        map.fitBounds(bounds, { padding: [40, 40] });
-      } else {
-        userMarker.setLatLng([latitude, longitude]);
-      }
-    },
-    () => {
-      if (fallback) fallback.hidden = false;
-    },
-    { enableHighAccuracy: true, maximumAge: 5000 }
-  );
 }
 
-/* ---------- página de acceso: alternar cliente / administrador ---------- */
+/* ---------- página de acceso: iniciar sesión o crear cuenta ----------
+   Un solo formulario para todos: clientes nuevos se registran aquí
+   mismo, y clientes existentes (incluidos administradores) inician
+   sesión por la misma puerta. La distinción de rol la hará el
+   backend según las credenciales, no la interfaz. */
 function initAccessPage() {
   const form = document.getElementById("accessForm");
   if (!form) return;
 
   const roleLabel = document.getElementById("roleLabel");
   const submitBtn = document.getElementById("accessSubmit");
-  const adminSwitch = document.getElementById("adminSwitch");
-  const backToClient = document.getElementById("backToClient");
-  let role = "cliente";
+  const toggleBtn = document.getElementById("toggleRegister");
+  const fieldName = document.getElementById("fieldName");
+  const fieldConfirm = document.getElementById("fieldConfirm");
+  const accessName = document.getElementById("accessName");
+  const accessConfirm = document.getElementById("accessConfirm");
+  let mode = "login";
 
   function render() {
-    roleLabel.textContent = role === "cliente" ? "Acceso de cliente" : "Acceso de administrador";
-    submitBtn.textContent = role === "cliente" ? "Entrar como cliente" : "Entrar como administrador";
-    adminSwitch.hidden = role !== "cliente";
-    backToClient.hidden = role !== "admin";
+    const isRegister = mode === "register";
+    roleLabel.textContent = isRegister ? "Crea tu cuenta de cliente" : "Inicia sesión con tu cuenta";
+    submitBtn.textContent = isRegister ? "Crear cuenta" : "Entrar";
+    fieldName.hidden = !isRegister;
+    fieldConfirm.hidden = !isRegister;
+    if (accessName) accessName.required = isRegister;
+    if (accessConfirm) accessConfirm.required = isRegister;
+    toggleBtn.textContent = isRegister ? "Ya tengo cuenta, iniciar sesión" : "¿Primera vez? Crea tu cuenta";
   }
 
-  adminSwitch?.addEventListener("click", () => { role = "admin"; render(); });
-  backToClient?.addEventListener("click", () => { role = "cliente"; render(); });
+  toggleBtn?.addEventListener("click", () => {
+    mode = mode === "login" ? "register" : "login";
+    render();
+  });
 
   form.addEventListener("submit", (e) => {
     e.preventDefault();
-    // La verificación real contra la base de datos se conecta después.
-    // Por ahora, "entrar" solo cambia a la vista de agenda dentro de la misma página.
+    // El registro y la verificación reales contra la base de datos
+    // se conectan después. Por ahora, "entrar" solo cambia a la
+    // vista de agenda dentro de la misma página.
     goToView("agenda");
   });
 

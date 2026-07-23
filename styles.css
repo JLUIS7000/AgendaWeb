@@ -169,7 +169,7 @@ img, svg { display: block; max-width: 100%; }
 .service-details ul { display: flex; flex-direction: column; gap: 6px; padding-top: 4px; font-size: 13.5px; }
 .service-details li { padding-left: 14px; position: relative; color: inherit; opacity: .9; }
 .service-details li::before { content: "—"; position: absolute; left: 0; opacity: .5; }
-.link-cta { display: inline-block; margin-top: 12px; font-weight: 600; font-size: 13.5px; color: var(--clay); }
+.link-cta { display: inline-block; margin-top: 12px; font-weight: 600; font-size: 13.5px; color: var(--clay); background: none; border: none; padding: 0; cursor: pointer; font-family: inherit; }
 .service-card.is-featured .link-cta { color: var(--clay-soft); }
 
 /* ============ HOW ============ */
@@ -259,8 +259,6 @@ img, svg { display: block; max-width: 100%; }
   animation: pulse 1.8s ease-out infinite;
 }
 @keyframes pulse { 0% { transform: scale(.5); opacity: .8; } 100% { transform: scale(1.9); opacity: 0; } }
-.map-fallback { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 10px; padding: 20px; text-align: center; color: var(--ink-soft); font-size: 13.5px; }
-.map-fallback svg { color: var(--clay); }
 
 .location-details { display: flex; flex-direction: column; gap: 16px; }
 .info-card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius-md); padding: 22px 24px; }
